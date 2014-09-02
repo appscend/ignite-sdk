@@ -1,0 +1,8 @@
+{
+	"name": "appscend/ignite_sdk",
+	"autoload": {
+		"psr-0": {
+			"IgniteSDK\\": "src/"
+		}
+	}
+}
