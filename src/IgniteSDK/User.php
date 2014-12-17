@@ -179,9 +179,15 @@ class User extends ResponseObject {
 		return isset($objects[1]) ? $objects : $objects[0];
 	}
 
-	public static function create($udid, $customFields, $force = false, $noDuplicate = false) {
+	public static function create($udid, $commonFields = [], $customFields = [], $force = false, $noDuplicate = false) {
 		self::initCurl(self::API_ENDPOINT.'createUser?appId='.Authorization::getAppId().'&timestamp='.time());
-		$fields = ['udid' => $udid, 'customFields' => json_encode($customFields)];
+		$fields = ['udid' => $udid];
+
+		if (!empty($customFields))
+			$fields['customFields'] = json_encode($customFields);
+
+		$fields = array_merge($fields, $commonFields);
+
 		if ($force) $fields['force'] = 1;
 		if ($noDuplicate) $fields['noDuplicateEmail'] = 1;
 
