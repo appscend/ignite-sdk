@@ -66,7 +66,7 @@ class User extends ResponseObject {
 			$fields['userLocation'] = $userLocation;
 			$fields['radius'] = $radius;
 		}
-		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['limit' => $limit, 'startFrom' => $offset]);
+		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, $fields);
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
