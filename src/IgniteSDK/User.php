@@ -54,7 +54,7 @@ class User extends ResponseObject {
 			$url .= '&expires_in=2';
 
 		self::initCurl($url);
-		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['email' => $email, 'pass' => $pass]);
+		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['email' => $email, 'password' => $pass]);
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
