@@ -6,6 +6,8 @@ class User extends ResponseObject {
 
 	const API_ENDPOINT = 'https://dev.appscend.net/api/v2/user/';
 
+	public static $cached = true;
+
 	public function setFields($fields) {
 		self::initCurl(self::API_ENDPOINT.'setUser?appId='.Authorization::getAppId().'&timestamp='.time());
 		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['udid' => $this->content['udid'], 'customFields' => json_encode($fields)]);
@@ -46,7 +48,12 @@ class User extends ResponseObject {
 	}
 
 	public static function login($email, $pass) {
-		self::initCurl(self::API_ENDPOINT.'login?appId='.Authorization::getAppId().'&timestamp='.time());
+		$url = self::API_ENDPOINT.'login?appId='.Authorization::getAppId().'&timestamp='.time();
+
+		if (self::$cached === false)
+			$url .= '&expires_in=2';
+
+		self::initCurl($url);
 		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['email' => $email, 'pass' => $pass]);
 
 		$result = curl_exec(self::$curl);
