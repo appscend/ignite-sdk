@@ -6,7 +6,7 @@ class Item extends ResponseObject {
 
 	const API_ENDPOINT = 'https://dev.appscend.net/api/v2/item/';
 
-	public static $cached = true;
+	public static $cached = false;
 
 	public function edit(array $content) {
 		self::initCurl(self::API_ENDPOINT.'editItem?appId='.Authorization::getAppId().'&timestamp='.time());
