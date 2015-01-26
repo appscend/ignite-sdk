@@ -6,11 +6,18 @@ class User extends ResponseObject {
 
 	const API_ENDPOINT = 'https://dev.appscend.net/api/v2/user/';
 
-	public static $cached = true;
+	public static $cached = false;
 
-	public function setFields($fields) {
-		self::initCurl(self::API_ENDPOINT.'setUser?appId='.Authorization::getAppId().'&timestamp='.time());
-		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['udid' => $this->content['udid'], 'customFields' => json_encode($fields)]);
+	public function setFields($fields, $customFields = []) {
+		$url = self::API_ENDPOINT.'setUser?appId='.Authorization::getAppId().'&timestamp='.time();
+		if (self::$cached === false)
+			$url .= '&expires_in=2';
+
+		self::initCurl($url);
+		if (!empty($customFields))
+			$fields = array_merge($fields, ['customFields' => json_encode($customFields)]);
+		$fields = array_merge($fields, ['idAppUser' => $this->content['idAppUser']]);
+		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, $fields);
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
@@ -19,7 +26,10 @@ class User extends ResponseObject {
 		if ($result['status'] >= 400)
 			throw new \Exception($result['content']);
 
-		$this->content['custom'] = $fields;
+		if (!empty($customFields))
+			$this->content['custom'] = is_array($this->content['custom']) ? array_merge($this->content['custom'], $customFields) : $this->content['custom'];
+
+		$this->content = array_merge($this->content, $fields);
 	}
 
 	public function notify($text, $igniteAction = null, $param = null) {
@@ -37,6 +47,8 @@ class User extends ResponseObject {
 			return null;
 		if ($result['status'] >= 400)
 			throw new \Exception($result['content']);
+
+		return $result;
 	}
 
 	public function relateTo($itemId, $relId) {
@@ -47,16 +59,19 @@ class User extends ResponseObject {
 		self::unrelateUser($this->content['idAppUser'], $itemId, $relId);
 	}
 
-	public static function login($email, $pass) {
+	public static function login($email, $pass, $appscendLogin = false) {
 		$url = self::API_ENDPOINT.'login?appId='.Authorization::getAppId().'&timestamp='.time();
 
 		if (self::$cached === false)
-			$url .= '&expires_in=2';
+			$url .= '&no_cache='.microtime(true);
+		if ($appscendLogin === true)
+			$url .= '&appscendLogin=1';
 
 		self::initCurl($url);
-		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['email' => $email, 'password' => $pass]);
+		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['email' => $email, 'password' => $pass, 'udid' => $_POST['udid']]);
 
 		$result = curl_exec(self::$curl);
+
 		$result = json_decode($result, true);
 		if (curl_getinfo(self::$curl, CURLINFO_HTTP_CODE) >= 400)
 			return null;
@@ -69,7 +84,11 @@ class User extends ResponseObject {
 	}
 
 	public static function search(array $fields, $limit = 200, $offset = 0, $userLocation = null, $radius = null) {
-		self::initCurl(self::API_ENDPOINT.'search?appId='.Authorization::getAppId().'&timestamp='.time());
+		$url = self::API_ENDPOINT.'search?appId='.Authorization::getAppId().'&timestamp='.time();
+		if (self::$cached === false)
+			$url .= '&no_cache='.microtime(true);
+
+		self::initCurl($url);
 		$fields = array_merge($fields, ['limit' => $limit, 'offset' => $offset]);
 		if ($userLocation) {
 			$fields['userLocation'] = $userLocation;
@@ -79,8 +98,9 @@ class User extends ResponseObject {
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
+
 		if (curl_getinfo(self::$curl, CURLINFO_HTTP_CODE) >= 400)
-			return null;
+			throw new \Exception('HTTP Status code error: '.curl_getinfo(self::$curl, CURLINFO_HTTP_CODE));
 		if ($result['status'] >= 400)
 			throw new \Exception($result['content']);
 
@@ -167,8 +187,14 @@ class User extends ResponseObject {
 	}
 
 	public static function get($id, $udid = false) {
-		self::initCurl(self::API_ENDPOINT.'getUser?appId='.Authorization::getAppId().'&timestamp='.time());
-		$fields = $udid ? ['udid' => $id] : ['idAppUser' => $id];
+		$url = self::API_ENDPOINT.'getUser?appId='.Authorization::getAppId().'&timestamp='.time();
+
+		if (self::$cached === false) {
+			$url .= '&no_cache='.microtime(true);
+		}
+
+		self::initCurl($url);
+		$fields = $udid == true ? ['udid' => $id] : ['idAppUser' => $id];
 		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, $fields);
 
 		$result = curl_exec(self::$curl);
@@ -179,13 +205,10 @@ class User extends ResponseObject {
 		if ($result['status'] >= 400)
 			throw new \Exception($result['content']);
 
-		$objects = [];
+		if (empty($result['content']))
+			return [];
 
-		foreach ($result['content'] as $i) {
-			$objects[] = new self($i);
-		}
-
-		return isset($objects[1]) ? $objects : $objects[0];
+		return new self($result['content']);
 	}
 
 	public static function create($udid, $commonFields = [], $customFields = [], $force = false, $noDuplicate = false) {

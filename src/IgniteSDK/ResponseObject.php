@@ -18,6 +18,7 @@ abstract class ResponseObject implements \ArrayAccess {
 			curl_setopt_array(self::$curl, [
 				CURLOPT_CUSTOMREQUEST => 'POST',
 				CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+				CURLINFO_HEADER_OUT => true,
 				CURLOPT_HTTPHEADER => [
 					'Authorization: Token token="'.openssl_digest(Authorization::getApiKey().time(), 'sha512').'"'
 				],

@@ -6,6 +6,8 @@ class Item extends ResponseObject {
 
 	const API_ENDPOINT = 'https://dev.appscend.net/api/v2/item/';
 
+	public static $cached = true;
+
 	public function edit(array $content) {
 		self::initCurl(self::API_ENDPOINT.'editItem?appId='.Authorization::getAppId().'&timestamp='.time());
 		$content['itemId'] = $this->content['itemId'];
@@ -13,6 +15,7 @@ class Item extends ResponseObject {
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
+		error_log(print_r($result, true));
 		if (curl_getinfo(self::$curl, CURLINFO_HTTP_CODE) >= 400) {
 			return null;
 		}
@@ -170,7 +173,11 @@ class Item extends ResponseObject {
 	}
 
 	public static function get($id) {
-		self::initCurl(self::API_ENDPOINT.'getItem?appId='.Authorization::getAppId().'&timestamp='.time());
+		$url = self::API_ENDPOINT.'getItem?appId='.Authorization::getAppId().'&timestamp='.time();
+		if (self::$cached == false)
+			$url .= '&no_cache='.microtime(true);
+
+		self::initCurl($url);
 		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, ['itemId' => $id]);
 
 		$result = curl_exec(self::$curl);
@@ -185,14 +192,19 @@ class Item extends ResponseObject {
 	}
 
 	public static function getCategoryItems($categoryId, array $params) {
-		self::initCurl(self::API_ENDPOINT.'getItems?appId='.Authorization::getAppId().'&timestamp='.time());
+		$url = self::API_ENDPOINT.'getItems?appId='.Authorization::getAppId().'&timestamp='.time();
+
+		if (self::$cached == false)
+			$url .= '&no_cache='.microtime(true);
+
+		self::initCurl($url);
 		$params['categoryId'] = $categoryId;
 		curl_setopt(self::$curl, CURLOPT_POSTFIELDS, $params);
 
 		$result = curl_exec(self::$curl);
 		$result = json_decode($result, true);
 		if (curl_getinfo(self::$curl, CURLINFO_HTTP_CODE) >= 400)
-			return null;
+			throw new \Exception('Error HTTP Status code: '.curl_getinfo(self::$curl, CURLINFO_HTTP_CODE));
 		if ($result['status'] >= 400)
 			throw new \Exception($result['content']);
 
